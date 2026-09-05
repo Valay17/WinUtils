@@ -1,0 +1,93 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- WinExe: tray-only utility, no console window. -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>ScreenDimmer</AssemblyName>
+    <RootNamespace>ScreenDimmer</RootNamespace>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!--
+      What Windows shows a person, as opposed to a filename.
+
+      AssemblyTitle becomes the Win32 FileDescription, which is the string Task
+      Manager reads for its Name column and Explorer shows in
+      Properties -> Details.
+    -->
+    <AssemblyTitle>Screen Dimmer</AssemblyTitle>
+    <Product>Screen Dimmer</Product>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+
+    <!--
+      The Win32 version resource is authored in version.rc rather than generated
+      from the properties above. The generated one is always language-neutral -
+      Properties > Details reads "Language Independent" - and no MSBuild property
+      changes that. The strings above still feed the *managed* assembly
+      attributes, so keep the two in step.
+    -->
+    <Win32Resource>version.res</Win32Resource>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!--
+      No UseWindowsForms. That single property is the whole reason the WinForms
+      build is 155 MB: it pulls in the Microsoft.WindowsDesktop.App runtime pack,
+      which for a self-contained publish means copying the entire desktop
+      runtime - including 40 MB of WPF this utility never touches - because
+      trimming, the mechanism that would remove it, is blocked by WinForms:
+
+          error NETSDK1175: Windows Forms is not supported or recommended with
+          trimming enabled.
+
+      Without it the tray icon, menu and overlays are Win32 calls, and this
+      becomes an ordinary native binary like the rest of this suite.
+    -->
+    <PublishAot>true</PublishAot>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!--
+      Runs the trim and AOT analyzers during an ordinary `dotnet build`, not just
+      at publish. That matters because the publish itself needs the MSVC linker
+      and can only happen on a real Windows machine - this way a non-Windows
+      authoring machine still catches AOT-unsafe patterns, which is how the
+      reflection-based JSON serialization in Config.cs was found.
+    -->
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <!--
+      InvariantTimezone is deliberately NOT set, though AOT guides suggest it as a
+      size saving. It strips the timezone database, and DateTime.Now then falls
+      back to UTC - every log line would silently shift by the local offset and
+      stop lining up with the other utilities' logs.
+    -->
+
+    <!--
+      app.manifest is still embedded, but through version.rc rather than from
+      here. <ApplicationManifest> and <Win32Resource> cannot both be set: csc
+      takes one or the other and fails with CS1564 if given both. The version
+      resource has to be a .res file to declare a language, so the manifest
+      moved into it - the same arrangement the other C++/C# utilities use.
+    -->
+  </PropertyGroup>
+
+  <!--
+    No PackageReference entries.
+
+    System.Text.Json and Microsoft.Win32.Registry both ship in the base runtime,
+    so dropping WinForms costs nothing here. System.Drawing does NOT - it is a
+    separate package once WinForms is gone - which is why the tray icon is drawn
+    with raw GDI in TrayIcon.cs rather than GDI+.
+
+    WMI (`WmiMonitorBrightness`) is the obvious way to read system brightness,
+    but it is not available here either: System.Management is a NuGet package
+    on .NET 5 and later. Brightness is read through
+    RegisterPowerSettingNotification instead: pure Win32, no package, and
+    event-driven rather than polled.
+  -->
+
+</Project>

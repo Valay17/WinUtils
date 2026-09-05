@@ -1,0 +1,143 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- WinExe (not Exe) so no console window flashes on screen at logon. -->
+    <OutputType>WinExe</OutputType>
+
+    <!--
+      The SDK-versioned TFM is what supplies the WinRT projections for
+      Windows.Devices.Bluetooth, .Enumeration and .Radios, which this is built on.
+      It adds no package reference.
+
+      **net9.0, alone among these utilities.**
+
+      Every WinRT call here that takes a *collection* of property-key strings
+      failed at run time under AOT:
+
+        Failed to create a CCW for object of type 'System.String[]'
+        for interface with IID 'E2FCC7C1-3BFC-5A0B-B2B0-72E769D1CB7E'
+
+      That IID is IIterable<String>. Handing a managed array to WinRT needs a
+      COM-callable wrapper, and building one at run time needs code generation -
+      the one thing ahead-of-time compilation removes. Both device watchers,
+      DeviceInformation.FindAllAsync and PnpObject.FindAllAsync all go through
+      such a call, so the utility saw the radio and could never see a device.
+      Radio.GetRadiosAsync() kept working because it is the only WinRT call in
+      the codebase that takes no arguments.
+
+      net9.0's projections carry CsWinRT's AOT support, which emits these vtables
+      at compile time. The cost is real but bounded: the ILCompiler package
+      follows the target framework rather than the installed SDK, so this pulls a
+      net9.0 ILC alongside the net8.0 one the rest of this suite uses. The
+      binary is framework-independent either way.
+    -->
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+    <!--
+      The OS-versioned TFM above makes the SDK refuse to resolve the Windows
+      reference assemblies on a non-Windows machine unless this is set
+      explicitly (NETSDK1100). It changes nothing on a real Windows machine,
+      where the OS actually matches; it is Microsoft's documented way to let a
+      Windows-targeted TFM restore and compile (metadata-only, never link or
+      run) from a non-Windows SDK, for type-checking a build elsewhere.
+    -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>BluetoothBattery</AssemblyName>
+    <RootNamespace>BluetoothBattery</RootNamespace>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!--
+      What Windows shows a person, as opposed to a filename. AssemblyTitle becomes
+      the Win32 FileDescription, which is what Task Manager reads for its Name
+      column and Explorer shows in Properties -> Details.
+    -->
+    <AssemblyTitle>Bluetooth Battery</AssemblyTitle>
+    <Product>Bluetooth Battery</Product>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+
+    <!--
+      The Win32 version resource is authored in version.rc rather than generated
+      from the properties above. The generated one is always language-neutral -
+      Properties > Details reads "Language Independent" - and no MSBuild property
+      changes that. The strings above still feed the *managed* assembly
+      attributes, so keep the two in step.
+    -->
+    <Win32Resource>version.res</Win32Resource>
+
+    <!--
+      Ahead-of-time compiled to a native binary. Avoiding UseWindowsForms keeps
+      this small - a WinForms build drags in the whole desktop runtime and
+      blocks trimming outright, where this configuration measures at 4.2 MB
+      with no loose DLLs beside it.
+
+      SelfContained and single-file are implied by AOT and must not be set
+      alongside it.
+    -->
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <!--
+      The generator that fixes the CCW failure above. It scans for managed types
+      handed to WinRT and emits their vtables into the binary, so nothing has to
+      be built at run time.
+
+      Set explicitly rather than left to its default, because the whole port
+      depends on it and a silent default flip would be invisible until the device
+      list came back empty again.
+    -->
+    <CsWinRTAotOptimizerEnabled>true</CsWinRTAotOptimizerEnabled>
+
+    <!--
+      **The analyser that would have caught the CCW failure above before it
+      shipped.**
+
+      Level 1 is the default when PublishAot is set, and level 1 says nothing
+      about any of it. Level 2 reports every type that implements a WinRT
+      interface without being partial - the same failure in a different place:
+      a vtable the runtime would have to build for itself, at a point where it
+      cannot. Worth keeping at 2, since that failure is otherwise silent at
+      build time and silent at publish time, only visible as an empty device
+      list at run time.
+    -->
+    <CsWinRTAotWarningLevel>2</CsWinRTAotWarningLevel>
+
+    <!--
+      InvariantTimezone is deliberately NOT set, though AOT guides suggest it as a
+      size saving. It strips the timezone database and DateTime.Now then falls back
+      to UTC - every log line would silently shift by the local offset and stop
+      lining up with the other utilities' logs.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      **The one package reference in this project, and the only one in the suite.**
+
+      This project's goal is no third-party dependencies, and this does not
+      breach it in any sense with consequences at run time:
+
+        - It is first-party Microsoft, not third-party.
+        - Under AOT it is a **build-time input**. The compiler links what is used
+          into the executable; the publish directory contains the exe and
+          nothing else. Nothing ships beside the binary and nothing is loaded at
+          run time.
+
+      It exists because DevicePopup draws text - the one thing that needed
+      proving before this port was attempted, since nothing else here draws a
+      single character.
+
+      Pinned rather than floating. Tracks the target framework (9.0.x rather
+      than 8.0.x) - mixing them pulls the 8.0 assembly in through a
+      compatibility path for no benefit.
+    -->
+    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+  </ItemGroup>
+
+</Project>

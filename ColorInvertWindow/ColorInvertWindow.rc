@@ -1,0 +1,70 @@
+#include <windows.h>
+#include "Resources.h"
+
+//
+// Resources.
+//
+// The tray icon is a file, not code drawn at run time. One icon, loaded once,
+// never replaced - the per-event cost is zero, and LoadIcon hands back a handle
+// owned by the module: shared, valid for the life of the process, never passed
+// to DestroyIcon. That also avoids a run-time-drawing bug class entirely (a
+// mask-ordering trap - deselecting the source bitmap before the BitBlt that
+// reads it - that silently produces a fully opaque icon): no drawing, no mask,
+// no trap.
+//
+// This file is a placeholder: a hollow white square, enough to prove the
+// mechanism and to be visible on a dark taskbar. Replace the .ico and nothing
+// else changes.
+//
+
+IDI_TRAY ICON "res/tray.ico"
+
+//
+// The application manifest, embedded rather than shipped alongside.
+//
+// A .manifest file sitting next to the exe would work, but it is a second file
+// the utility would have to be deployed with - and these are meant to be
+// standalone executables launched from Explorer or a Run key. Embedding keeps
+// that true.
+//
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "app.manifest"
+
+//
+// Version information - what Windows shows a person, as opposed to a filename.
+//
+// FileDescription is the string Task Manager reads for the Name column, and it
+// is also what the Details tab, Explorer's Properties dialog and the Startup tab
+// all display. A utility that sits in the tray for weeks should say what it is.
+//
+// InternalName and OriginalFilename match the real file identity too, so the
+// exe, its log, its mutex, its shutdown event and its Run value all read
+// ColorInvertWindow consistently.
+//
+// Language 0x0409 / codepage 1200 is US English / Unicode.
+//
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION     1,0,0,0
+ PRODUCTVERSION  1,0,0,0
+ FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+ FILEFLAGS       0x0L
+ FILEOS          VOS_NT_WINDOWS32
+ FILETYPE        VFT_APP
+ FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "FileDescription",  "Color Invert Window"
+            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "InternalName",     "ColorInvertWindow"
+            VALUE "OriginalFilename", "ColorInvertWindow.exe"
+            VALUE "ProductName",      "Color Invert Window"
+            VALUE "ProductVersion",   "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

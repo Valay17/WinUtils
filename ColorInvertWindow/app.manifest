@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+
+  <assemblyIdentity version="1.0.0.0" name="ColorInvertWindow" type="win32"/>
+
+  <!--
+    Windows 10 only, deliberately.
+
+    Windows 10 and 11 share one GUID - Microsoft never issued a separate one for
+    11 - so this single entry covers both and there is nothing to add or remove
+    for 11. What it *excludes* is Windows 8 and 8.1, which were declared here
+    before and are not targets.
+
+    Declaring the OS at all matters: an application that declares none is treated
+    as designed for Windows 8, and several APIs then return compatibility-shimmed
+    values rather than real ones.
+  -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+
+  <!--
+    Per-monitor-v2 DPI awareness.
+
+    This utility's only coordinates are GetCursorPos and TrackPopupMenu, which
+    Windows virtualises consistently for an unaware process too - so this isn't
+    about coordinates landing in the wrong place. It's about rendering: a
+    DPI-unaware process draws at 96 DPI and the shell stretches the result, so
+    on a scaled display the tray icon and menu go soft without this.
+
+    The icon can still fall short of pin-sharp for a separate reason: the tray
+    .ico contains a single 16x16 image, so the shell has nothing larger to scale
+    from when it wants 20x20 at 125%. Authoring 16/20/24/32 in one file fixes
+    that independently of DPI awareness.
+  -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+    </windowsSettings>
+  </application>
+
+  <!--
+    asInvoker: this utility needs no elevation. It marks windows, sets a screen-wide color
+    effect through the Magnification API, and writes only beside its own
+    executable.
+  -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+</assembly>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+
+  <assemblyIdentity version="1.0.0.0" name="AppTiling" type="win32"/>
+
+  <!--
+    Windows 10 only, deliberately.
+
+    Windows 10 and 11 share one GUID - Microsoft never issued a separate one for
+    11 - so this single entry covers both and there is nothing to add for 11.
+    What it excludes is Windows 8 and 8.1, which are not targets.
+
+    Declaring the OS at all matters: an application that declares none is treated
+    as designed for Windows 8, and several APIs then return compatibility-shimmed
+    values rather than real ones.
+  -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+
+  <!--
+    Per-monitor-v2 DPI awareness, declared here rather than by calling
+    SetProcessDpiAwarenessContext in code.
+
+    A manifest applies before the process starts, so the awareness is settled
+    before any coordinate is read. It also avoids a real hazard the code-based
+    version had: calling SetProcessDpiAwarenessContext when the context is
+    already set fails with ERROR_ACCESS_DENIED, so keeping both would log a
+    spurious warning on every run.
+
+    It matters because App Tiling positions windows by SetWindowPos against
+    monitor rectangles. A DPI-unaware process is handed virtualised coordinates
+    for one and real ones for the other, and the windows land in the wrong
+    place on any display above 100% scaling.
+  -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+    </windowsSettings>
+  </application>
+
+  <!--
+    requireAdministrator - what makes double-clicking AppTiling.exe work at all.
+
+    App Tiling arranges Task Manager and Open Hardware Monitor. Both commonly
+    run elevated, and Windows refuses SetWindowPos from a lower-integrity
+    process to a higher-integrity window: an unelevated run logs
+    `Elevated: False`, fails both placements with Win32 error 5, and moves
+    nothing.
+
+    Without this, the default `asInvoker` applies and a double-clicked launch
+    can never do its job - it fails silently with exit code 1 and no window to
+    say so. A Task Scheduler entry registered with /RL HIGHEST elevates
+    independently of the manifest either way.
+
+    With this, double-click prompts for UAC and then works. An already-elevated
+    scheduled-task launch is unaffected and sees no prompt.
+  -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+</assembly>

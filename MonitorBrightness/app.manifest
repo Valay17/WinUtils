@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+
+  <assemblyIdentity version="1.0.0.0" name="MonitorBrightness" type="win32"/>
+
+  <!--
+    Windows 10 only, deliberately. One GUID covers both 10 and 11 - Microsoft
+    never issued a separate one for 11. Declaring nothing gets an application
+    treated as designed for Windows 8, with several APIs then returning
+    compatibility-shimmed values instead of real ones.
+  -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+
+  <!--
+    Per-monitor-v2 DPI awareness.
+
+    Without this, a process runs at Windows' unmanifested default, which
+    bitmap-stretches the whole process to match the display's scale factor
+    rather than letting it render at the real resolution and report real
+    coordinates. That matters twice over here: the tray icon and the slider
+    popup would render soft on a scaled display, and GetCursorPos-driven logic
+    (which monitor is under the cursor, for the per-monitor hotkeys) would be
+    lied to about coordinates.
+  -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+    </windowsSettings>
+  </application>
+
+  <!--
+    asInvoker: this utility needs no elevation. DDC/CI monitor control and
+    hotkey registration both work from a normal, unelevated process, and it
+    writes only beside its own executable.
+  -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+</assembly>

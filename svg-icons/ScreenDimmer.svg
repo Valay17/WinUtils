@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <clipPath id="bottom-half">
+      <rect x="0" y="50" width="100" height="50"/>
+    </clipPath>
+  </defs>
+  <circle cx="50" cy="50" r="37.5" fill="#000000"/>
+  <circle cx="50" cy="50" r="37.5" fill="#bebebe" clip-path="url(#bottom-half)"/>
+  <circle cx="50" cy="50" r="37.5" fill="none" stroke="#ffffff" stroke-width="9"/>
+</svg>

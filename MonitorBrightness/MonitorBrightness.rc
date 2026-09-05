@@ -1,0 +1,64 @@
+#include <windows.h>
+#include "Resources.h"
+
+//
+// Resources.
+//
+// The tray icon is a compiled asset rather than drawn at run time - it never
+// actually reflected live brightness in the first place, so a static icon
+// loses nothing. One icon, loaded once, shared by the Explorer/taskbar icon
+// and the tray icon both, via the same resource id.
+//
+
+IDI_TRAY ICON "res/app.ico"
+
+//
+// The application manifest, embedded rather than shipped alongside.
+//
+// A .manifest file sitting next to the exe would work, but it is a second
+// file the utility would have to be deployed with - and these are meant to
+// be standalone executables launched from Explorer or a Run key. Embedding
+// keeps that true.
+//
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "app.manifest"
+
+//
+// Version information - what Windows shows a person, as opposed to a
+// filename.
+//
+// FileDescription is the string Task Manager's Name column reads, and it is
+// also what the Details tab, Explorer's Properties dialog, and the Startup
+// tab all display.
+//
+// InternalName and OriginalFilename match the real file identity too, so the
+// exe, its log, its mutex, its shutdown event and its Run value all read
+// MonitorBrightness consistently.
+//
+// Language 0x0409 / codepage 1200 is US English / Unicode.
+//
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION     1,0,0,0
+ PRODUCTVERSION  1,0,0,0
+ FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+ FILEFLAGS       0x0L
+ FILEOS          VOS_NT_WINDOWS32
+ FILETYPE        VFT_APP
+ FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "FileDescription",  "Monitor Brightness"
+            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "InternalName",     "MonitorBrightness"
+            VALUE "OriginalFilename", "MonitorBrightness.exe"
+            VALUE "ProductName",      "Monitor Brightness"
+            VALUE "ProductVersion",   "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+
+  <assemblyIdentity version="1.0.0.0" name="DesktopZoom" type="win32"/>
+
+  <!--
+    Windows 10 only, deliberately.
+
+    Windows 10 and 11 share one GUID - Microsoft never issued a separate one for
+    11 - so this single entry covers both. What it excludes is Windows 8 and 8.1,
+    which are not targets.
+
+    Declaring the OS at all matters: an application that declares none is treated
+    as designed for Windows 8, and several APIs then return compatibility-shimmed
+    values rather than real ones.
+  -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+
+  <!--
+    Per-monitor-v2 DPI awareness, declared here rather than by calling
+    SetProcessDpiAwarenessContext in code.
+
+    Process DPI awareness needs to be settled before any window or DC exists -
+    a manifest applies before the process starts, which is the only way to be
+    certain of that; a run-time call risks landing after a window is already
+    created.
+
+    This is not cosmetic. A DPI-unaware process is told the screen is a smaller
+    virtualised resolution than it really is, so the view origin gets clamped
+    to that smaller rectangle while the magnifier itself works in real pixels -
+    leaving a real fraction of the desktop unreachable. The top-left corner
+    still works regardless, since (0,0) is (0,0) in either coordinate system -
+    which is exactly why this reads as an edge-clamping bug rather than a
+    scaling one until you look closer.
+  -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+    </windowsSettings>
+  </application>
+
+  <!--
+    asInvoker: this utility needs no elevation. It sets a fullscreen
+    magnification transform and writes only beside its own executable.
+  -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+</assembly>

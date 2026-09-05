@@ -1,0 +1,74 @@
+#include <windows.h>
+
+//
+// The app icon Explorer/the taskbar shows for the .exe itself. App Tiling has
+// no tray presence at all - it runs once and exits - so unlike the other
+// utilities' IDI_TRAY this exists purely as the file icon, never loaded from
+// code. The first (and only) ICON statement in a module's resources becomes
+// its default Explorer icon, which is the whole mechanism this relies on. Two
+// overlapping rounded rectangles, offset diagonally for a layered/3D read.
+//
+IDI_APP ICON "res/app.ico"
+
+//
+// Version information for App Tiling, authored rather than generated.
+//
+// **Why this file exists.** MSBuild generates a version resource from the
+// <AssemblyTitle> and <Product> properties in the .csproj, and everything it
+// puts in the strings is right, including the UAC prompt's own display name.
+// What it will not do is declare a language. Roslyn writes the block key as
+// 000004b0 - language-neutral - and there is no MSBuild property that changes
+// it. <NeutralLanguage>en-US</NeutralLanguage> sets the managed
+// NeutralResourcesLanguageAttribute and leaves the Win32 resource untouched.
+//
+// So Properties > Details listed the Language as "Language Independent". The
+// only way to say English (United States) is to supply the whole resource, which
+// is what this is. <Win32Resource> in the .csproj points at the compiled .res
+// and MSBuild then generates nothing of its own - which means every string below
+// is now the single source of that string, including the versions.
+//
+// **Keep it in step with the .csproj.** AssemblyTitle, Product and FileVersion
+// there are still what the managed attributes read; if they disagree with this
+// file, Windows shows one and the assembly reports the other.
+//
+// Language 0x0409 / codepage 1200 is US English / Unicode.
+//
+//
+// The application manifest, embedded here rather than handed to the compiler
+// separately.
+//
+// It has to live in this file: csc takes *either* a Win32 resource file or a
+// Win32 manifest, never both (CS1564). Since the version information now comes
+// from a .res - the only way to declare a language - the manifest comes with it.
+// The .csproj no longer sets <ApplicationManifest>; this line is what puts it in
+// the binary. CREATEPROCESS_MANIFEST_RESOURCE_ID is 1, which is the id Windows
+// looks for in an executable.
+//
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "app.manifest"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION     1,0,0,0
+ PRODUCTVERSION  1,0,0,0
+ FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+ FILEFLAGS       0x0L
+ FILEOS          VOS_NT_WINDOWS32
+ FILETYPE        VFT_APP
+ FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "FileDescription",  "App Tiling"
+            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "InternalName",     "AppTiling"
+            VALUE "OriginalFilename", "AppTiling.exe"
+            VALUE "ProductName",      "App Tiling"
+            VALUE "ProductVersion",   "1.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

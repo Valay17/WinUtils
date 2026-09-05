@@ -1,0 +1,97 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- WinExe (not Exe) so no console window flashes on screen at logon. -->
+    <OutputType>WinExe</OutputType>
+
+    <!--
+      **net8.0, not net9.0 - but with the Windows-SDK-versioned suffix.**
+
+      The WinRT build's net9.0 (and its whole CsWinRTAotOptimizer block) exists
+      for one reason: WinRT's IIterable<String> CCW failure under AOT, hit only
+      by calls that hand a *collection* of strings into WinRT -
+      DeviceInformation.FindAllAsync and PnpObject.FindAllAsync. This project
+      has exactly one WinRT call - Radio.GetRadiosAsync(), in BluetoothRadio.cs,
+      since there's no Win32-only way to read whether the Bluetooth radio is
+      switched on (see that file's class comment). That call takes no
+      arguments, so it never hits the CCW failure and already works under plain
+      AOT.
+
+      So this stays on net8.0's (lighter) AOT toolchain rather than following
+      the WinRT build to net9.0. The only change from a plain net8.0-windows
+      TFM is the OS version suffix, which is what pulls in the WinRT
+      projections at all. CsWinRTAotWarningLevel below is a tripwire in case a
+      future change adds a collection-taking WinRT call here without anyone
+      noticing.
+    -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+    <!--
+      The OS-versioned TFM above makes the SDK refuse to resolve the Windows
+      reference assemblies on a non-Windows machine unless this is set
+      explicitly (NETSDK1100). It changes nothing on a real Windows machine,
+      where the OS actually matches; it is Microsoft's documented way to let a
+      Windows-targeted TFM restore and compile (metadata-only, never link or
+      run) from a non-Windows SDK, for type-checking a build elsewhere.
+    -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+    <!--
+      Matches the WinRT build's own AssemblyName: the two never run at the
+      same time and share one identity.
+    -->
+    <AssemblyName>BluetoothBattery</AssemblyName>
+    <RootNamespace>BluetoothBattery</RootNamespace>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Same identity the WinRT build shows a person. -->
+    <AssemblyTitle>Bluetooth Battery</AssemblyTitle>
+    <Product>Bluetooth Battery</Product>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+
+    <!--
+      Same version.rc/.res arrangement as every other utility here: a
+      committed .res rather than generated, since the generated one is always
+      language-neutral.
+    -->
+    <Win32Resource>version.res</Win32Resource>
+
+    <!--
+      Ahead-of-time compiled to a native binary, same as every utility in this
+      project. Avoiding UseWindowsForms keeps this small; the WinRT-specific
+      machinery the sibling build needs is gone entirely here.
+    -->
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <!--
+      A tripwire, not a cure - this project has no call that hands a
+      collection into WinRT, so CsWinRTAotOptimizerEnabled is not needed. This
+      just makes sure that stays true: if anything ever adds one, it fails
+      loudly here instead of silently on the target machine.
+    -->
+    <CsWinRTAotWarningLevel>2</CsWinRTAotWarningLevel>
+
+    <!--
+      InvariantTimezone deliberately not set - see every other csproj in this
+      project for why: DateTime.Now would silently fall back to UTC.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      DevicePopup draws text with GDI+, which needs this package under AOT.
+      It was never a WinRT dependency, so it's unaffected by anything WinRT-
+      specific.
+    -->
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,103 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- WinExe (not Exe) so no console window flashes on screen at every login. -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>AppTiling</AssemblyName>
+    <RootNamespace>AppTiling</RootNamespace>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!--
+      What Windows shows a person, as opposed to a filename.
+
+      AssemblyTitle becomes the Win32 FileDescription, which is the string Task
+      Manager reads for its Name column and Explorer shows in
+      Properties -> Details. It is also what the UAC prompt shows, which this
+      utility raises on every single run.
+    -->
+    <AssemblyTitle>App Tiling</AssemblyTitle>
+    <Product>App Tiling</Product>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+
+    <!--
+      The Win32 version resource is authored in version.rc rather than generated
+      from the properties above. The generated one is always language-neutral -
+      Properties > Details reads "Language Independent" - and no MSBuild property
+      changes that. The strings above still feed the *managed* assembly
+      attributes, so keep the two in step.
+    -->
+    <Win32Resource>version.res</Win32Resource>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!--
+      Ahead-of-time compiled to a native binary.
+
+      This utility runs at logon, which is the busiest moment on the machine,
+      and a self-contained build was 65 MB of cold disk read plus runtime
+      start-up before it did anything. AOT emits an ordinary native executable
+      - no IL, no JIT, no runtime to load - the same shape every other utility
+      in this suite uses.
+
+      This became possible only after the COM access was rewritten:
+      Type.GetTypeFromCLSID names a type by GUID at run time, so no static
+      analysis can see it is needed, which blocks both trimming and AOT.
+      VDesktop replaced it with CoCreateInstance and direct vtable dispatch, so
+      there is no COM left in this project at all.
+
+      SelfContained and single-file are implied by AOT and must not be set
+      alongside it.
+
+      If this ever fails to build, deleting PublishAot and restoring
+      PublishSingleFile + SelfContained returns to the previous binary shape
+      with no other change.
+    -->
+    <PublishAot>true</PublishAot>
+
+    <!--
+      Needed for the extended per-monitor diagnostics in LogMonitorTopology
+      (native resolution, friendly name, EDID) in WindowLayout.cs, which use
+      fixed char buffers and pointer reads - gated behind logging.on rather
+      than removed. This needs unsafe at compile time regardless of whether
+      that gate ever lets the code run.
+
+      Take this back out only once ReadFixed and every fixed char struct field
+      in WindowLayout.cs are gone entirely: nothing else in this project uses
+      unsafe code, so this property should only exist while something here
+      actually needs it.
+    -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!--
+      app.manifest is still embedded, but through version.rc rather than from
+      here. It declares Windows 10 as the target, per-monitor-v2 DPI awareness,
+      and - the one that changes behavior - requireAdministrator, without which
+      a double-clicked AppTiling.exe runs unelevated and cannot move an
+      elevated window at all.
+
+      <ApplicationManifest> and <Win32Resource> cannot both be set: csc takes one
+      or the other and fails with CS1564 if given both. The version resource has
+      to be a .res file to declare a language, so the manifest moved into it.
+    -->
+
+    <!--
+      InvariantTimezone is deliberately NOT set, though AOT guides suggest it as a
+      size saving. It strips the timezone database, and DateTime.Now then falls
+      back to UTC - every log line would silently shift by the local offset and
+      stop lining up with the other utilities' logs. A few hundred KB is not worth
+      timestamps that quietly lie.
+    -->
+  </PropertyGroup>
+
+  <!--
+    No PackageReference entries by design. Everything this utility needs
+    (registry access, COM interop, Win32 P/Invoke) ships with net8.0-windows,
+    so there is nothing to restore and no third-party dependency.
+  -->
+
+</Project>
